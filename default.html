@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+  <style media="screen">
+    textarea:focus, input:focus {
+    outline: none;
+    }
+
+    div.Menu {
+      position:absolute;
+      width:400px;
+      height:250px;
+      border: 2px solid black;
+      background-color:white
+    }
+
+    span {
+      font-family: Arial, Helvetica, sans-serif;
+    }
+  </style>
+  <body style="">
+      <!--div style="top:0px; left:0px; width:100%; height:100%; position:absolute; background:blue;" fred="top:0px; left:0px; width:100%; height:100%; position:absolute; display:flex; justify-content:center;vertical-align: middle;;background:blue">
+      <div id="divControls" style="position:absolute; width:500px; height:auto;">
+      </div-->
+      <div style="position: absolute; left: 0px; top: 0px; width:100%; height: 100%; display: flex; justify-content: center; align-items: center; background:gray">
+        <div id="divControls" style="position:absolute; width:500px; height:200px; filter: blur(2px) opacity(50%);">
+        </div>
+        <div id = "divMenu" class="Menu">
+          <div style="visibility:inherit">
+            <img src="./Logo.svg" style="position: absolute; top:10px; left:100px; width:200px; height:auto" />
+            <span style="position: absolute; top:50px; left:0px; width:100%; height:auto; font-size:12pt; color:#A19F9F; text-align:center">Montage/MODX Analogue Synth Interface</span>
+          </div>
+          <div id="frmInitOptions" style="visibility:inherit">
+            <span style="position: absolute; top:102px; left:60px; width:160pt; height:auto; font-size:10pt;">MIDI Interface:</span>
+            <select id="selMIDI" style="position: absolute; top:100px; left:190px; width:140px;">
+            </select>
+            <span style="position: absolute; top:142px; left:60px; width:160pt; height:auto; font-size:10pt;">Initialise GenX on:</span>
+            <select id="selPart" style="position: absolute; top:140px; left:190px; width:140px;">
+              <option value="0">New Performance</option>
+              <!--option value="1">Part 1</option>
+              <option value="2">Part 2</option>
+              <option value="3">Part 3</option>
+              <option value="4">Part 4</option>
+              <option value="5">Part 5</option>
+              <option value="6">Part 6</option>
+              <option value="7">Part 7</option>
+              <option value="8">Part 8</option-->
+            </select>
+
+            <button type-"button" style="position: absolute; top:190px; left:140px; width:120px; height:40px;" onclick="Connect()">Connect</button>
+
+            <!--button type-"button" style="position: absolute; top:220px; left:10px; width:60px; height:20px;" onclick="run3()">Run3</button-->
+          </div>
+          <div id="frmInitError" style="visibility:hidden">
+            <span id="txtInitError" style="position: absolute; top:120px; left:50px; width:300px; height:auto; font-size:12pt; text-align:center; color:red"></span>
+          </div>
+        </div>
+      </div>
+    <!--div style="position:absolute; width:500px;background:red">
+      <input type="button" value="Initialise MIDI" onclick="run()"/>
+      <input type="button" value="Connect" />
+      <input id="txtTry" type="text" value="0x7F"/>
+      <input type="button" value="Try" onclick="tryThis()"/>
+      <div id="debug"></div>
+    </div-->
+  </body>
+
+  <script src="https://cdn.jsdelivr.net/npm/webmidi@next/dist/iife/webmidi.iife.js"></script>
+  <script src="./input-knobs.js"></script>
+  <script src="./VirtualSynth.js"></script>
+  <script src="./Montage_MODX.js"></script>
+  <script type="text/javascript">
+
+    var myOutput;
+    var GenX;
+    var Synth;
+    var Part = 0;
+
+    const urlParams = new URLSearchParams(window.location.search);
+    var noMidi = (urlParams.get('nomidi')=="true" ? true : false);
+
+    window.addEventListener("resize", resize); resize();
+
+    window.onload = function() {
+      GenX = new VirtualSynth();
+      GenX.DrawBackground(document.getElementById("divControls"));
+
+      WebMidi
+        .enable()
+        .then(onMidiEnabled)
+        .catch(err => onInitError(err));
+    }
+    function onMidiEnabled() {
+      if (WebMidi.inputs.length < 1) {
+        onInitError("No MIDI devices detected. Please make sure your MIDI devices are attached and necessary drivers installed.");
+      }
+      else {
+        var foundOne = false;
+        WebMidi.inputs.forEach((device, index) => {
+          if (`${device.name}`.includes("MODX") || `${device.name}`.includes("MONTAGE")) {
+            var sel = document.getElementById("selMIDI");
+            var opt = document.createElement("option");
+            opt.text = `${device.name}`;
+            sel.add(opt);
+            foundOne = true;
+          }
+        });
+        if (!foundOne)
+          onInitError("No Montage or MODX devices detected. Please make sure your devices are attached and necessary drivers installed.");
+      }
+    }
+    function onInitError(err) {
+        document.getElementById("txtInitError").innerHTML = err;
+        document.getElementById("frmInitOptions").style.visibility = "hidden";
+        document.getElementById("frmInitError").style.visibility = "visible";
+    }
+
+    function Connect() {
+      WebMidi
+        .disable()
+        .then(onDisconnect)
+        .catch(err => onInitError(err));
+    }
+    function onDisconnect() {
+      WebMidi
+        .enable({sysex: true})
+        .then(onConnect)
+        .catch(err => onInitError(err));
+    }
+    function onConnect() {
+      //Get selected MIDI controller
+      var sel = document.getElementById("selMIDI");
+      var midiController = sel.options[sel.selectedIndex].text;
+
+      //Get selected part
+      var part = document.getElementById("selPart").value;
+
+      //myOutput = WebMidi.getOutputByName("MODX-1");
+      myOutput = WebMidi.getOutputByName(midiController);
+      Synth = new HardwareSynth(myOutput);
+
+      var ctrl = document.getElementById("divControls");
+      var menu = document.getElementById("divMenu");
+
+      GenX.AddControls();
+      if (part == 0) {
+        GenX.SetupPerformance();
+        part = 1;
+      }
+      GenX.SetupPart(part-1);
+      GenX.DrawControls(ctrl);
+      GenX.SetControls();
+
+      ctrl.style.filter = "";
+      menu.style.visibility = "hidden";
+    }
+
+    function resize()
+    {
+      var div = document.getElementById("divControls");
+      var w = window.innerWidth/500*.95;
+      var h = window.innerHeight/200*.95;
+      var wh = (w < h ? w : h);
+      //div.style.transformOrigin = "center";
+      div.style.transform = "scale(" + wh + "," + wh + ")";
+    }
+
+    function onControlChange(controlId, value) {
+        if (!noMidi) {
+          GenX.onControlChange(controlId, value);
+        }
+    }
+
+    function onEnabled2() {
+
+      // Display available MIDI input devices
+      if (WebMidi.inputs.length < 1) {
+        document.body.innerHTML+= "No device detected.";
+      } else {
+        WebMidi.inputs.forEach((device, index) => {
+          document.body.innerHTML+= `${index}: ${device.name} <br>`;
+        });
+      }
+    }
+  </script>
+</html>
