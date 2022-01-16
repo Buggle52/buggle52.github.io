@@ -11,11 +11,13 @@ class VirtualSynth {
   SetupPerformance() {
     //Select Init Performance
     Synth.PerformanceChange(64, 31, 124);
+    Synth.PerformanceName("GenX Test")
   }
 
   SetupPart(partId) {
     Part = partId;
 
+    Synth.PartName(Part, "GenX")
     Synth.PartSwitch(Part, 1);
 
     //Switch on mono

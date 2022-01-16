@@ -41,6 +41,22 @@ class HardwareSynth {
     this.output.sendProgramChange(program);
   }
 
+  PerformanceName(name) {
+    for (var i=0; i<name.length; i++)
+      this.#SendSysex([0x30, 0x40, 0x00 + i, name.charCodeAt(i)]);
+    for (var i=name.length; i<20; i++)
+      this.#SendSysex([0x30, 0x40, 0x00 + i, 0x00]);
+  }
+
+  PartName(partId, name) {
+    var ep = this.#ConvertP(partId);
+
+    for (var i=0; i<name.length; i++)
+      this.#SendSysex([0x31, ep, 0x00 + i, name.charCodeAt(i)]);
+    for (var i=name.length; i<20; i++)
+      this.#SendSysex([0x31, ep, 0x00 + i, 0x00]);
+  }
+
   PartSwitch(partId, value) {
     var ep = this.#ConvertP(partId);
     this.#SendSysex([0x31, ep, 0x16, value]);
