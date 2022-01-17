@@ -1,6 +1,7 @@
 class HardwareSynth {
-  constructor(output) {
+  constructor(output, synthId) {
       this.output = output;
+      this.synthId = synthId;
       //this.#Initialise();
   }
 
@@ -347,7 +348,7 @@ class HardwareSynth {
   }
 
   #SendSysex(message) {
-    var msg = [0x10, 0x7F, 0x1C, 0x07];
+    var msg = [0x10, 0x7F, 0x1C, this.synthId];
     msg = msg.concat(message);
 
     this.output.sendSysex(0x43, msg);

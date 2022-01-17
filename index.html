@@ -154,13 +154,14 @@
       //Get selected MIDI controller
       var sel = document.getElementById("selMIDI");
       var midiController = sel.options[sel.selectedIndex].text;
+      var synthId = (midiController.includes("MODX") ? 0x07 : 0x01);
 
       //Get selected part
       var part = document.getElementById("selPart").value;
 
       //myOutput = WebMidi.getOutputByName("MODX-1");
       myOutput = WebMidi.getOutputByName(midiController);
-      Synth = new HardwareSynth(myOutput);
+      Synth = new HardwareSynth(myOutput, synthId);
 
       var ctrl = document.getElementById("divControls");
       var menu = document.getElementById("divMenu");
